@@ -7,6 +7,7 @@ module "EC2"{
 }
 
 #test
+#test2
 
 module "Network"{
   source        = "../../modules/Network/"
