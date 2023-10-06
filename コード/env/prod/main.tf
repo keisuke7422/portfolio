@@ -6,6 +6,8 @@ module "EC2"{
   tags = "prod"
 }
 
+#test
+
 module "Network"{
   source        = "../../modules/Network/"
   cidr_block_vpc =  "10.1.0.0/16"
