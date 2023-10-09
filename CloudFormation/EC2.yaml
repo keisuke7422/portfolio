@@ -1,0 +1,116 @@
+AWSTemplateFormatVersion: "2010-09-09"
+
+Description:
+  test-blog
+
+Resources:
+  hirota-cfn-vpc:  #リソースの名前【TestVPC】
+    Type: AWS::EC2::VPC     #VPC作成するタイプを指定【AWS::EC2::VPC】
+    Properties:
+      CidrBlock: 10.0.0.0/16
+      Tags:                   #タグの指定、Key、Valueの順に記載する
+        - Key: Name
+          Value: hirota-cfn-vpc
+
+
+  hirota-cfn-igw:
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags:
+        - Key: Name
+          Value: hirota-cfn-igw
+
+
+  AttachGateway:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      VpcId: !Ref hirota-cfn-vpc
+      InternetGatewayId: !Ref hirota-cfn-igw
+
+
+  hirota-cfn-pub-sub-a:
+    Type: AWS::EC2::Subnet
+    Properties:
+      AvailabilityZone: ap-northeast-1a
+      VpcId: !Ref hirota-cfn-vpc
+      CidrBlock: 10.0.0.0/24
+      Tags:
+        - Key: Name
+          Value: hirota-cfn-pub-sub-a
+
+  hirota-cfn-pub-rtb:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref hirota-cfn-vpc
+      Tags:
+        - Key: Name
+          Value: hirota-cfn-pub-rtb
+
+
+  TestRoute1:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref hirota-cfn-pub-rtb
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref hirota-cfn-igw
+
+
+  TestSubNetRoutTablAsso:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref hirota-cfn-pub-sub-a
+      RouteTableId: !Ref hirota-cfn-pub-rtb
+
+
+  hirota-cfn-ssh-sg:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName: hirota-cfn-ssh-sg
+      GroupDescription: hirota-cfn-ssh-sg
+      VpcId: !Ref hirota-cfn-vpc
+      SecurityGroupIngress:
+      - 
+        IpProtocol: tcp
+        CidrIp: !Ref MyCidrIp
+        FromPort: "22"
+        ToPort: "22"
+
+#MYIPの宣言
+Parameters:
+  MyCidrIp
+#
+
+
+  NewKeyPair:
+    Type: 'AWS::EC2::KeyPair'
+    Properties:
+      KeyName: hirota-KeyPair
+
+  hirota-cfn-linux:
+    Type: AWS::EC2::Instance
+    Properties:
+      ImageId: ami-02f3f602d23f1659d
+      KeyName: hirota-KeyPair
+      InstanceType: t2.micro
+      InstanceInitiatedShutdownBehavior: stop
+      Tenancy: default
+      NetworkInterfaces:
+        - AssociatePublicIpAddress: "true"
+          DeviceIndex: "0"
+          SubnetId: !Ref hirota-cfn-pub-sub-a
+          GroupSet:
+            - !Ref hirota-cfn-ssh-sg
+          #PrivateIpAddress: 10.0.1.10
+
+      Tags:
+          - Key: Name
+            Value: hirota-cfn-linux
+      
+            #amazonlinux2 ImageId ami-09ebacdc178ae23b7
+
+      BlockDeviceMappings:  
+        - DeviceName: /dev/xvda
+          Ebs:
+            VolumeType: gp3
+            DeleteOnTermination: true 
+            VolumeSize: 8
