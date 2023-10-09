@@ -2,109 +2,113 @@ AWSTemplateFormatVersion: "2010-09-09"
 
 Description:
   test-blog
+Parameters:
+  LatestAmiId:
+    Type: 'AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>'
+    Default: '/aws/service/ami-amazon-linux-latest/al2023-ami-minimal-kernel-default-x86_64'
 
 Resources:
-  hirota-cfn-vpc:  #リソースの名前【TestVPC】
+  hirotacfnvpc:  #リソースの名前【TestVPC】
     Type: AWS::EC2::VPC     #VPC作成するタイプを指定【AWS::EC2::VPC】
     Properties:
       CidrBlock: 10.0.0.0/16
       Tags:                   #タグの指定、Key、Valueの順に記載する
         - Key: Name
-          Value: hirota-cfn-vpc
+          Value: hirotacfnvpc
 
 
-  hirota-cfn-igw:
+  hirotacfnigw:
     Type: AWS::EC2::InternetGateway
     Properties:
       Tags:
         - Key: Name
-          Value: hirota-cfn-igw
+          Value: hirotacfnigw
 
 
   AttachGateway:
     Type: AWS::EC2::VPCGatewayAttachment
     Properties:
-      VpcId: !Ref hirota-cfn-vpc
-      InternetGatewayId: !Ref hirota-cfn-igw
+      VpcId: !Ref hirotacfnvpc
+      InternetGatewayId: !Ref hirotacfnigw
 
 
-  hirota-cfn-pub-sub-a:
+  hirotacfnpubsuba:
     Type: AWS::EC2::Subnet
     Properties:
       AvailabilityZone: ap-northeast-1a
-      VpcId: !Ref hirota-cfn-vpc
+      VpcId: !Ref hirotacfnvpc
       CidrBlock: 10.0.0.0/24
       Tags:
         - Key: Name
-          Value: hirota-cfn-pub-sub-a
+          Value: hirotacfnpubsuba
 
-  hirota-cfn-pub-rtb:
+  hirotacfnpubrtb:
     Type: AWS::EC2::RouteTable
     Properties:
-      VpcId: !Ref hirota-cfn-vpc
+      VpcId: !Ref hirotacfnvpc
       Tags:
         - Key: Name
-          Value: hirota-cfn-pub-rtb
+          Value: hirotacfnpubrtb
 
 
   TestRoute1:
     Type: AWS::EC2::Route
     Properties:
-      RouteTableId: !Ref hirota-cfn-pub-rtb
+      RouteTableId: !Ref hirotacfnpubrtb
       DestinationCidrBlock: 0.0.0.0/0
-      GatewayId: !Ref hirota-cfn-igw
+      GatewayId: !Ref hirotacfnigw
 
 
   TestSubNetRoutTablAsso:
     Type: AWS::EC2::SubnetRouteTableAssociation
     Properties:
-      SubnetId: !Ref hirota-cfn-pub-sub-a
-      RouteTableId: !Ref hirota-cfn-pub-rtb
+      SubnetId: !Ref hirotacfnpubsuba
+      RouteTableId: !Ref hirotacfnpubrtb
 
 
-  hirota-cfn-ssh-sg:
+  hirotacfnsshsg:
     Type: AWS::EC2::SecurityGroup
     Properties:
-      GroupName: hirota-cfn-ssh-sg
-      GroupDescription: hirota-cfn-ssh-sg
-      VpcId: !Ref hirota-cfn-vpc
+      GroupName: hirotacfnsshsg
+      GroupDescription: hirotacfnsshsg
+      VpcId: !Ref hirotacfnvpc
       SecurityGroupIngress:
       - 
         IpProtocol: tcp
-        CidrIp: !Ref MyCidrIp
+        CidrIp: 10.1.2.23/24
         FromPort: "22"
         ToPort: "22"
 
-#MYIPの宣言
-Parameters:
-  MyCidrIp
-#
+# #MYIPの宣言
+# Parameters:
+#   MyCidrIp
+# #
 
 
-  NewKeyPair:
-    Type: 'AWS::EC2::KeyPair'
-    Properties:
-      KeyName: hirota-KeyPair
+#   NewKeyPair:
+#     Type: 'AWS::EC2::KeyPair'
+#     Properties:
+#       KeyName: hirota-KeyPair
 
-  hirota-cfn-linux:
+  hirotacfnlinux:
     Type: AWS::EC2::Instance
     Properties:
-      ImageId: ami-02f3f602d23f1659d
-      KeyName: hirota-KeyPair
+      ImageId: !Ref LatestAmiId
+      KeyName: xxx-key
       InstanceType: t2.micro
       InstanceInitiatedShutdownBehavior: stop
       Tenancy: default
       NetworkInterfaces:
         - AssociatePublicIpAddress: "true"
           DeviceIndex: "0"
-          SubnetId: !Ref hirota-cfn-pub-sub-a
+          SubnetId: !Ref hirotacfnpubsuba
           GroupSet:
-            - !Ref hirota-cfn-ssh-sg
+            - !Ref hirotacfnsshsg
           #PrivateIpAddress: 10.0.1.10
 
       Tags:
           - Key: Name
-            Value: hirota-cfn-linux
+            Value: hirotacfnlinux
       
             #amazonlinux2 ImageId ami-09ebacdc178ae23b7
 
