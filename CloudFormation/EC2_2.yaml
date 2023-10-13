@@ -95,7 +95,7 @@ Resources:
             Action:
               - sts:AssumeRole
       Policies:
-        - PolicyName: CloudWatchLogsPolicy
+        - PolicyName: CloudWatchLogsAndInternetAccessPolicy
           PolicyDocument:
             Version: '2012-10-17'
             Statement:
@@ -105,6 +105,12 @@ Resources:
                   - logs:CreateLogStream
                   - logs:PutLogEvents
                 Resource: '*'
+              - Effect: Allow
+                Action:
+                  - ec2:CreateNetworkInterface
+                  - ec2:DescribeNetworkInterfaces
+                  - ec2:DeleteNetworkInterface
+                Resource: "*"
 
   GetMyIPFunction:
     Type: AWS::Lambda::Function
@@ -123,6 +129,8 @@ Resources:
               return {
                   "IPAddress": ip_address
               }
+      Timeout: 10  
+      MemorySize: 256  
 
   MyIPCustomResource:
     Type: Custom::MyIPResource

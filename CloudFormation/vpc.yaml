@@ -2,11 +2,11 @@ Description:
   test-blog
 
 Resources:
-    TestVPC:                   #リソースの名前【TestVPC】
-      Type: AWS::EC2::VPC             #VPC作成するタイプを指定【AWS::EC2::VPC】
+    TestVPC:                   
+      Type: AWS::EC2::VPC             
       Properties:
-        CidrBlock: 10.1.0.0/16      #CidrBlockを指定
-        Tags:             #タグの指定、Key、Valueの順に記載する
+        CidrBlock: 10.1.0.0/16      
+        Tags:            
           - Key: Name
             Value: TEST-VPC
 
