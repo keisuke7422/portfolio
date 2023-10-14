@@ -1,0 +1,173 @@
+AWSTemplateFormatVersion: "2010-09-09"
+
+Description:
+  test-blog
+Parameters:
+  LatestAmiId:
+    Type: 'AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>'
+    Default: '/aws/service/ami-amazon-linux-latest/al2023-ami-minimal-kernel-default-x86_64'
+  AZ:
+    Type: String
+    Default: ap-northeast-1a
+    
+Resources:
+  hirotacfnvpc:  
+    Type: AWS::EC2::VPC     
+    Properties:
+      CidrBlock: 10.0.0.0/16
+      Tags:                   
+        - Key: Name
+          Value: hirotacfnvpc
+
+
+  hirotacfnigw:
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags:
+        - Key: Name
+          Value: hirotacfnigw
+
+
+  AttachGateway:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      VpcId: !Ref hirotacfnvpc
+      InternetGatewayId: !Ref hirotacfnigw
+
+
+  hirotacfnpubsuba:
+    Type: AWS::EC2::Subnet
+    Properties:
+      AvailabilityZone: !Ref AZ
+      VpcId: !Ref hirotacfnvpc
+      CidrBlock: 10.0.0.0/24
+      Tags:
+        - Key: Name
+          Value: hirotacfnpubsuba
+
+  hirotacfnpubrtb:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref hirotacfnvpc
+      Tags:
+        - Key: Name
+          Value: hirotacfnpubrtb
+
+
+  TestRoute1:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref hirotacfnpubrtb
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref hirotacfnigw
+
+
+  TestSubNetRoutTablAsso:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref hirotacfnpubsuba
+      RouteTableId: !Ref hirotacfnpubrtb
+
+
+  hirotacfnsshsg:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName: hirotacfnsshsg
+      GroupDescription: hirotacfnsshsg
+      VpcId: !Ref hirotacfnvpc
+      SecurityGroupIngress:
+      - 
+        IpProtocol: tcp
+        CidrIp: !Sub "${MyIPCustomResource.IPAddress}/32"
+        FromPort: "22"
+        ToPort: "22"
+
+  GetMyIPFunctionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      Policies:
+        - PolicyName: CloudWatchLogsAndInternetAccessPolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: '*'
+              - Effect: Allow
+                Action:
+                  - ec2:CreateNetworkInterface
+                  - ec2:DescribeNetworkInterfaces
+                  - ec2:DeleteNetworkInterface
+                Resource: "*"
+
+  GetMyIPFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      Handler: index.handler
+      Role: !GetAtt GetMyIPFunctionRole.Arn
+      Runtime: python3.9
+      Code:
+        ZipFile: |
+          import json
+          import requests
+
+          def handler(event, context):
+              response = requests.get("https://checkip.amazonaws.com/")
+              ip_address = response.text.strip()
+              return {
+                  "IPAddress": ip_address
+              }
+      Timeout: 10  
+      MemorySize: 256  
+
+  MyIPCustomResource:
+    Type: Custom::MyIPResource
+    Properties:
+      ServiceToken: !GetAtt GetMyIPFunction.Arn
+
+
+#   NewKeyPair:
+#     Type: 'AWS::EC2::KeyPair'
+#     Properties:
+#       KeyName: hirota-KeyPair
+
+  hirotacfnlinux:
+    Type: AWS::EC2::Instance
+    Properties:
+      ImageId: !Ref LatestAmiId
+      KeyName: xxx-key
+      InstanceType: t2.micro
+      InstanceInitiatedShutdownBehavior: stop
+      Tenancy: default
+      NetworkInterfaces:
+        - AssociatePublicIpAddress: "true"
+          DeviceIndex: "0"
+          SubnetId: !Ref hirotacfnpubsuba
+          GroupSet:
+            - !Ref hirotacfnsshsg
+          #PrivateIpAddress: 10.0.1.10
+
+      Tags:
+          - Key: Name
+            Value: hirotacfnlinux
+      
+            #amazonlinux2 ImageId ami-09ebacdc178ae23b7
+
+      BlockDeviceMappings:  
+        - DeviceName: /dev/xvda
+          Ebs:
+            VolumeType: gp3
+            DeleteOnTermination: true 
+            VolumeSize: 8
