@@ -9,6 +9,9 @@ Parameters:
   AZ:
     Type: String
     Default: ap-northeast-1a
+  homeIp: 
+    Type: String
+    Description: my changing ip
     
 Resources:
   hirotacfnvpc:  
@@ -78,56 +81,56 @@ Resources:
       SecurityGroupIngress:
       - 
         IpProtocol: tcp
-        CidrIp: !Sub "${MyIPCustomResource.IPAddress}/32"
+        CidrIp: !Sub "${my changing ip}/32"
         FromPort: "22"
         ToPort: "22"
 
-  GetMyIPFunctionRole:
-    Type: AWS::IAM::Role
-    Properties:
-      AssumeRolePolicyDocument:
-        Version: '2012-10-17'
-        Statement:
-          - Effect: Allow
-            Principal:
-              Service:
-                - lambda.amazonaws.com
-            Action:
-              - sts:AssumeRole
-      Policies:
-        - PolicyName: CloudWatchLogsPolicy
-          PolicyDocument:
-            Version: '2012-10-17'
-            Statement:
-              - Effect: Allow
-                Action:
-                  - logs:CreateLogGroup
-                  - logs:CreateLogStream
-                  - logs:PutLogEvents
-                Resource: '*'
+  # GetMyIPFunctionRole:
+  #   Type: AWS::IAM::Role
+  #   Properties:
+  #     AssumeRolePolicyDocument:
+  #       Version: '2012-10-17'
+  #       Statement:
+  #         - Effect: Allow
+  #           Principal:
+  #             Service:
+  #               - lambda.amazonaws.com
+  #           Action:
+  #             - sts:AssumeRole
+  #     Policies:
+  #       - PolicyName: CloudWatchLogsPolicy
+  #         PolicyDocument:
+  #           Version: '2012-10-17'
+  #           Statement:
+  #             - Effect: Allow
+  #               Action:
+  #                 - logs:CreateLogGroup
+  #                 - logs:CreateLogStream
+  #                 - logs:PutLogEvents
+  #               Resource: '*'
 
-  GetMyIPFunction:
-    Type: AWS::Lambda::Function
-    Properties:
-      Handler: index.handler
-      Role: !GetAtt GetMyIPFunctionRole.Arn
-      Runtime: python3.9
-      Code:
-        ZipFile: |
-          import json
-          import requests
+#  GetMyIPFunction:
+#     Type: AWS::Lambda::Function
+#     Properties:
+#       Handler: index.handler
+#       Role: !GetAtt GetMyIPFunctionRole.Arn
+#       Runtime: python3.9
+#       Code:
+#         ZipFile: |
+#           import json
+#           import requests
 
-          def handler(event, context):
-              response = requests.get("https://checkip.amazonaws.com/")
-              ip_address = response.text.strip()
-              return {
-                  "IPAddress": ip_address
-              }
+#           def handler(event, context):
+#               response = requests.get("https://checkip.amazonaws.com/")
+#               ip_address = response.text.strip()
+#               return {
+#                   "IPAddress": ip_address
+#               }
 
-  MyIPCustomResource:
-    Type: Custom::MyIPResource
-    Properties:
-      ServiceToken: !GetAtt GetMyIPFunction.Arn
+#   MyIPCustomResource:
+#     Type: Custom::MyIPResource
+#     Properties:
+#       ServiceToken: !GetAtt GetMyIPFunction.Arn"
 
 
 #   NewKeyPair:
